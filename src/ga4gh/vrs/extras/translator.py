@@ -336,8 +336,8 @@ class Translator:
 
         if (type(vo).__name__ != "Allele"
             or type(vo.location).__name__ != "SequenceLocation"
-            or type(vo.state).__name__ != "LiteralSequenceExpression"):
-            raise ValueError(f"_to_hgvs requires a VRS Allele with SequenceLocation and LiteralSequenceExpression")
+            or type(vo.state).__name__ not in ("LiteralSequenceExpression", "SequenceState")):
+            raise ValueError(f"_to_hgvs requires a VRS Allele with SequenceLocation and LiteralSequenceExpression|SequenceState")
 
         sequence_id = str(vo.location.sequence_id)
         aliases = self.data_proxy.translate_sequence_identifier(sequence_id, namespace)
@@ -355,8 +355,12 @@ class Translator:
             # ival = hgvs.location.Interval(start=start, end=end)
             # edit = hgvs.edit.AARefAlt(ref=None, alt=vo.state.sequence)
         else:                   # pylint: disable=no-else-raise
-            start = vo.location.interval.start.value
-            end = vo.location.interval.end.value
+            if type(vo.location.interval).__name__ == "SimpleInterval":
+                start = vo.location.interval.start
+                end = vo.location.interval.end
+            else:
+                start = vo.location.interval.start.value
+                end = vo.location.interval.end.value
             # ib: 0 1 2 3 4 5
             #  h:  1 2 3 4 5
             if start == end:    # insert: hgvs uses *exclusive coords*
@@ -426,15 +430,19 @@ class Translator:
 
         if (type(vo).__name__ != "Allele"
             or type(vo.location).__name__ != "SequenceLocation"
-            or type(vo.state).__name__ != "LiteralSequenceExpression"):
-            raise ValueError(f"_to_hgvs requires a VRS Allele with SequenceLocation and LiteralSequenceExpression")
+            or type(vo.state).__name__ not in ("LiteralSequenceExpression", "SequenceState")):
+            raise ValueError(f"_to_spdi requires a VRS Allele with SequenceLocation and LiteralSequenceExpression|SequenceState")
 
         sequence_id = str(vo.location.sequence_id)
         aliases = self.data_proxy.translate_sequence_identifier(sequence_id, namespace)
         aliases = [a.split(":")[1] for a in aliases]
 
-        start = vo.location.interval.start.value
-        end = vo.location.interval.end.value
+        if type(vo.location.interval).__name__ == "SimpleInterval":
+            start = vo.location.interval.start
+            end = vo.location.interval.end
+        else:
+            start = vo.location.interval.start.value
+            end = vo.location.interval.end.value
         spdi_tail = f":{start}:{end-start}:{vo.state.sequence}"
         spdis = [a + spdi_tail for a in aliases]
         return spdis
